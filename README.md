@@ -1,59 +1,79 @@
-# DengueX – AI-Powered Dengue Information & Forecasting System
+# 🩸 DengueX – AI-Powered Dengue Awareness & Forecasting System
 
-DengueX is a Final Year Project (FYP) that provides three core modules:
-
-## 1. Dengue Chatbot (English + Roman Urdu)
-A medical-grade Q&A chatbot using:
-- Custom dataset (900+ curated Q&A)
-- TF-IDF Vectorizer + SVM baseline
-- Spell handling and irrelevant query rejection
-- Bilingual response engine (English & Roman Urdu)
-
-## 2. Dengue Forecast Dashboard
-Data visualization & trends for Pakistan-based dengue cases.
-
-## 3. Mosquito Breeding Report System
-User-submitted reports, images, and geolocation mapping.
+## 📘 Overview
+**DengueX** is an AI-based health information and analytics system developed as a **Final Year Project (FYP 2025)**.  
+It combines **machine learning**, **data visualization**, and **public engagement** to assist in the **early detection, awareness, and prevention of dengue outbreaks**.
 
 ---
 
-# Project Structure
+## 💡 Why DengueX Matters
+Dengue fever continues to be a major health challenge in Pakistan and other tropical regions.  
+Public misinformation, delayed detection, and poor awareness often lead to severe cases and fatalities.
 
-data/raw → Raw collected datasets
-data/processed → Clean, validated, model-ready data
-src/preprocessing → Preprocessing scripts
-src/model → Training scripts & saved models
+**DengueX** addresses this by providing:
+- A **medical-grade chatbot** that answers dengue-related queries in **English and Roman Urdu**
+- A **forecasting dashboard** for dengue case trends and analysis  
+- A **community-based mosquito breeding reporting system** to support early intervention  
 
-
-# Current Progress (Milestones)
-✅ Step 1: Dataset creation (900 Q&A)  
-✅ Step 2: Text preprocessing pipeline  
-✅ Step 3: Train/Test split  
-⬜ Step 4: TF-IDF + SVM model  
-⬜ Step 5: Save .pkl model + inference script  
-⬜ Step 6: Web chatbot UI  
-⬜ Step 7: Backend API  
-⬜ Step 8: Testing & deployment
+Our goal is to **empower the public and health authorities** through data-driven insights and accessible AI support.
 
 ---
 
-# How to Run Preprocessing
-python src/preprocessing/prepare_dataset.py
-python src/preprocessing/train_test_split.py
+## 🧠 Core Components
+1. **Dengue Chatbot**  
+   - 900+ bilingual dengue-related Q&A pairs  
+   - Built using **TF-IDF + SVM** (92% accuracy)  
+   - Detects spelling variations and irrelevant questions  
+   - Responds in the same language as the query  
 
+2. **Forecast Dashboard**  
+   - Visualizes dengue trends across Pakistan  
+   - Uses **Matplotlib / Plotly** for analytics and predictions  
+
+3. **Mosquito Breeding Report System**  
+   - Allows users to report breeding sites with **images + location**  
+   - Displays risk zones on an interactive map  
 
 ---
 
-# Tech Stack
-- Python
-- Scikit-learn (TF-IDF, SVM)
-- Pandas
-- Matplotlib / Plotly (forecast dashboard)
-- Flask / FastAPI (backend)
-- React or Streamlit (frontend)
+## ⚙️ Technology Stack
+| Category | Tools |
+|-----------|-------|
+| Language | Python 3.11 |
+| Machine Learning | Scikit-learn (TF-IDF, SVM) |
+| Data Handling | Pandas, NumPy |
+| Visualization | Matplotlib, Plotly |
+| Backend | Flask / FastAPI |
+| Frontend | React / Streamlit |
+| Database | SQLite / PostgreSQL (Planned) |
+| Deployment | GitHub + Cloud Platform (Future Scope) |
 
 ---
 
-# Author
-Final Year Project – DengueX (2025)
+## 👨‍💻 Team Members
+| Name | Role |
+|------|------|
+| **M. Wassam Baig** | Project Lead & AI Developer |
+| **Adil Mehmood Awan** | Backend & System Integration Engineer |
+
+---
+
+## 🎯 Vision
+> “To build a reliable, AI-assisted dengue information platform that helps communities make faster, smarter, and safer health decisions.”
+
+---
+
+## 🏫 Project Information
+- **Project Name:** DengueX  
+- **Type:** Final Year Project (FYP 2025)  
+- **Field:** Artificial Intelligence & Data Science  
+- **Institution:** *[Add your University Name]*  
+- **Supervised by:** *[Supervisor’s Name]*  
+
+---
+
+### 🌟 Summary
+DengueX is not just a chatbot — it’s a **comprehensive dengue prevention ecosystem** powered by artificial intelligence, data science, and public participation.
+
+---
 
