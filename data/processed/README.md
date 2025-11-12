@@ -1,24 +1,30 @@
+# 🧩 DengueX – Processed Data
 
-# data/processed
+This folder contains all cleaned, validated, and model-ready datasets.
 
-Contains cleaned, validated, and model-ready datasets.
+---
 
-## Files
+## 📄 Files Overview
 
-### 1. Dengue_chatbot_data_clean.csv
-- Cleaned version of raw dataset  
-- Fixed malformed rows  
-- Correct 8-column structure  
-- 899 total Q&A pairs  
-- Unique IDs only  
+### 🧼 `Dengue_chatbot_data_clean.csv`
+- Cleaned version of raw data (fixed malformed lines).  
+- 899 total Q&A pairs with unique IDs.  
+- Used as base for label merging.
 
-### 2. model_ready/dengue_questions_clean.csv
-- Preprocessed questions  
-- Contains `combined_question` used for TF-IDF training  
+### 🧭 `Dengue_chatbot_data_merged_labels.csv`
+- Final dataset used for model training.  
+- Contains mapped and consolidated intent labels.  
+- Used in `train_intent_final.py`.
 
-### 3. model_ready/train.csv / test.csv
-- Train–test split (80/20)
-- Used for model training & evaluation
+### 🧾 `label_map.json`
+- JSON dictionary of all tag → label mappings used during preprocessing.
 
-## Notes
-These files should be used for ML steps 4–6.
+---
+
+## 📊 Notes
+- All files use UTF-8 encoding.  
+- Every row has 8 consistent columns.  
+- No missing or duplicate IDs.  
+- Directly consumable by TF-IDF + SVM models (Steps 4–6).
+
+---
