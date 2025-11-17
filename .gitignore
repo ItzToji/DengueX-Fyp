@@ -1,0 +1,36 @@
+# Python / env
+venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Data / large model artifacts (do not commit heavy binaries)
+feature1_chatbot/index/
+*.npy
+*.faiss
+*.bin
+
+# Build / dist
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Local data
+data/
+models/
