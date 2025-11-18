@@ -1,221 +1,242 @@
+# feature1_chatbot/chatbot_engine.py
 """
-chatbot_engine.py (embeddings + FAISS version)
-
-Key functions:
- - init_index(index_dir)         # call once at startup
- - get_reply(text)               # main call: returns reply dict
- - add_kb_item(item)             # optional: add a new KB item to index (in-memory). Persist manually.
- - rebuild_index(...)            # helper to rebuild from KB file
-
-Requirements:
- - sentence-transformers
- - faiss-cpu
- - numpy
+Chatbot engine updated for one-vector-per-variant index.
+- load_kb(kb_path): legacy loader (builds representative embeddings for tests)
+- init_index(index_dir): loads index built by build_embeddings_variants.py
+- get_reply(text): retrieves top-k vectors, aggregates scores by kb_id, returns canonical_answer for best kb_id
 """
 import os, json, numpy as np
-from sentence_transformers import SentenceTransformer
-import faiss
 
-# Adjustable params
-INDEX_DIR = os.path.join(os.path.dirname(__file__), "index")  # expected index path
+# sentence-transformers
+from sentence_transformers import SentenceTransformer
+
+# optional faiss
+try:
+    import faiss
+    HAS_FAISS = True
+except Exception:
+    faiss = None
+    HAS_FAISS = False
+
+INDEX_DIR = os.path.join(os.path.dirname(__file__), "index")
 MODEL = None
+
+# In-memory fallback structures (used by load_kb and by retrieval fallback)
+EMBEDDINGS = None
+META = []          # when load_kb used: list of kb items; when index loaded: list of vector meta entries
 FAISS_INDEX = None
-META = []            # list of KB metadata (json objects) aligned with embeddings / index order
-EMBEDDINGS = None    # numpy array
-SIMILARITY_THRESHOLD = 0.45   # cosine similarity threshold (works with normalized embeddings & IP metric)
+
+SIMILARITY_THRESHOLD = 0.45
 TOP_K = 5
 
-# Basic intent/urgency keywords (keeps earlier functionality)
-URGENT_KEYWORDS = set(["severe abdominal pain","persistent vomiting","bleeding","difficulty breathing","faint","cold/clammy","vomit blood","black stool","lethargy","difficulty waking"])
-DENGUE_KEYWORDS = set(["dengue","mosquito","aedes","fever","platelet","rash","ns1","serology","dengue fever","dengue virus"])
+# --- helpers ---
+def _ensure_model(model_name="all-MiniLM-L6-v2"):
+    global MODEL
+    if MODEL is None:
+        MODEL = SentenceTransformer(model_name)
+    return MODEL
 
+def _rep_text_for_item(it):
+    title = it.get("title","")
+    variants = it.get("question_variants",[]) or []
+    rep = title
+    if variants:
+        rep += " || " + " || ".join(variants[:3])
+    return rep
+
+def _normalize_rows(x):
+    norms = np.linalg.norm(x, axis=1, keepdims=True)
+    norms[norms==0] = 1.0
+    return x / norms
+
+# --- legacy loader for tests (keeps previous behavior) ---
+def load_kb(kb_path, model_name="all-MiniLM-L6-v2"):
+    """
+    Load KB (JSONL of kb items) and build representative in-memory embeddings.
+    Returns count of kb items loaded.
+    """
+    global META, EMBEDDINGS, MODEL, FAISS_INDEX
+    MODEL = _ensure_model(model_name)
+
+    items = []
+    with open(kb_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line=line.strip()
+            if not line: continue
+            try:
+                it = json.loads(line)
+            except Exception:
+                continue
+            items.append(it)
+    META = items
+    rep_texts = [_rep_text_for_item(it) for it in META]
+    if rep_texts:
+        embs = MODEL.encode(rep_texts, convert_to_numpy=True, show_progress_bar=False, normalize_embeddings=True)
+        EMBEDDINGS = embs.astype("float32")
+    else:
+        EMBEDDINGS = np.zeros((0, MODEL.get_sentence_embedding_dimension()), dtype="float32")
+    FAISS_INDEX = None
+    return len(META)
+
+# --- init index built with build_embeddings_variants.py ---
 def init_index(index_dir=INDEX_DIR):
-    global MODEL, FAISS_INDEX, META, EMBEDDINGS
-    # load model name
+    """
+    Load index files from index_dir created by build_embeddings_variants.py
+    """
+    global MODEL, EMBEDDINGS, META, FAISS_INDEX
     model_file = os.path.join(index_dir, "model_name.txt")
-    if not os.path.exists(model_file):
-        raise FileNotFoundError("Model file not found. Run build_embeddings.py first.")
-    model_name = open(model_file,"r",encoding="utf-8").read().strip()
-    MODEL = SentenceTransformer(model_name)
-
     emb_path = os.path.join(index_dir, "embeddings.npy")
     meta_path = os.path.join(index_dir, "meta.jsonl")
-    index_path = os.path.join(index_dir, "index.faiss")
+    idx_path = os.path.join(index_dir, "index.faiss")
 
-    if not os.path.exists(emb_path) or not os.path.exists(meta_path) or not os.path.exists(index_path):
-        raise FileNotFoundError("Missing index files. Build them with build_embeddings.py")
+    if not os.path.exists(model_file) or not os.path.exists(emb_path) or not os.path.exists(meta_path):
+        raise FileNotFoundError("Index files missing. Run build_embeddings_variants.py first.")
 
-    EMBEDDINGS = np.load(emb_path)
-    # load meta
+    model_name = open(model_file,"r",encoding="utf-8").read().strip()
+    MODEL = _ensure_model(model_name)
+
+    EMBEDDINGS = np.load(emb_path).astype("float32")
+    # load vector-level meta (one entry per vector)
     META = []
-    with open(meta_path, "r", encoding="utf-8") as f:
+    with open(meta_path,"r",encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 META.append(json.loads(line))
 
-    # load FAISS index
-    FAISS_INDEX = faiss.read_index(index_path)
+    if os.path.exists(idx_path):
+        if not HAS_FAISS:
+            raise ImportError("FAISS index file exists but faiss not installed in this environment.")
+        FAISS_INDEX = faiss.read_index(idx_path)
+    else:
+        FAISS_INDEX = None
 
-    # ensure embeddings normalized if using inner-product search
-    # NB: build_embeddings wrote normalized embeddings; but double-check
-    def normalize_rows(x):
-        norms = np.linalg.norm(x, axis=1, keepdims=True)
-        norms[norms==0] = 1.0
-        return x / norms
-    EMBEDDINGS[:] = normalize_rows(EMBEDDINGS)
+    # ensure normalized
+    EMBEDDINGS[:] = _normalize_rows(EMBEDDINGS)
+    return len(META)
 
-    print(f"Index loaded: {len(META)} items, model: {model_name}")
-
+# --- embedding helper ---
 def _embed_text(text):
     global MODEL
     if MODEL is None:
-        raise RuntimeError("Model not initialized. Call init_index() first.")
+        MODEL = _ensure_model()
     emb = MODEL.encode([text], convert_to_numpy=True, normalize_embeddings=True)
-    return emb[0]
+    return emb[0].astype("float32")
 
-def predict_intent(text):
-    # simple keyword fallback; we will also rely on retrieval for final decision
-    txt = text.lower()
-    score = sum(1 for k in DENGUE_KEYWORDS if k in txt)
-    if score >= 1:
-        return 'dengue'
-    if 'fever' in txt and 'mosquito' in txt:
-        return 'dengue'
-    return 'not-dengue'
-
-def is_urgent(text):
-    txt = text.lower()
-    matches = []
-    for kw in URGENT_KEYWORDS:
-        if kw in txt:
-            matches.append(kw)
-    return (len(matches) > 0, matches)
-
-def find_top_k(text, top_k=TOP_K):
-    emb = _embed_text(text).astype('float32').reshape(1,-1)
-    # FAISS inner product expects normalized embeddings for cosine similarity equivalence
-    D, I = FAISS_INDEX.search(emb, top_k)  # returns distances (scores) and indices
-    # D are inner product scores (since embeddings normalized)
+# --- retrieval helpers ---
+def _retrieve_with_faiss(text, top_k=TOP_K):
+    emb = _embed_text(text).reshape(1,-1)
+    D, I = FAISS_INDEX.search(emb, top_k*3)  # search more vectors to allow aggregation
     results = []
     for score, idx in zip(D[0], I[0]):
         if idx < 0 or idx >= len(META):
             continue
-        meta = META[idx].copy()
-        meta['score'] = float(score)
-        results.append((meta, float(score)))
+        m = META[idx].copy()
+        m['vector_score'] = float(score)
+        m['vector_index'] = int(idx)
+        results.append(m)
     return results
 
+def _retrieve_in_memory(text, top_k=TOP_K):
+    if EMBEDDINGS is None or EMBEDDINGS.shape[0] == 0:
+        return []
+    q_emb = _embed_text(text).astype("float32")
+    scores = np.dot(EMBEDDINGS, q_emb)
+    idxs = np.argsort(-scores)[:top_k*3]
+    results = []
+    for idx in idxs:
+        if idx < 0 or idx >= len(META):
+            continue
+        m = META[idx].copy()
+        m['vector_score'] = float(scores[idx])
+        m['vector_index'] = int(idx)
+        results.append(m)
+    return results
+
+# --- aggregation: group vectors by kb_id and aggregate scores ---
+def _aggregate_by_kb(results):
+    # results: list of vector-level meta with vector_score and kb_id
+    agg = {}
+    for r in results:
+        kb = str(r.get("kb_id"))
+        score = float(r.get("vector_score", 0.0))
+        # aggregate by sum and track best vector meta
+        if kb not in agg:
+            agg[kb] = {"score_sum": score, "max_score": score, "example": r}
+        else:
+            agg[kb]["score_sum"] += score
+            if score > agg[kb]["max_score"]:
+                agg[kb]["max_score"] = score
+                agg[kb]["example"] = r
+    # convert to list sorted by score_sum desc
+    out = []
+    for kb, info in agg.items():
+        out.append((kb, info["score_sum"], info["max_score"], info["example"]))
+    out.sort(key=lambda x: x[1], reverse=True)
+    return out
+
+# --- simple urgency detector (same as before) ---
+URGENT_KEYWORDS = set([
+    "severe abdominal pain","persistent vomiting","vomit blood","vomiting blood",
+    "difficulty breathing","faint","cold/clammy","black stool","lethargy","difficulty waking"
+])
+
+def is_urgent(text):
+    txt = (text or "").lower()
+    matches = [kw for kw in URGENT_KEYWORDS if kw in txt]
+    return (len(matches) > 0, matches)
+
+# --- main get_reply ---
 def get_reply(text):
-    # urgent check first (quick)
+    # urgent check
     urgent_flag, urgent_matches = is_urgent(text)
     if urgent_flag:
         return {
-            'reply': 'This message contains warning signs. Seek immediate medical care or go to the nearest emergency department. If you are in immediate danger call local emergency services.',
-            'kb_id': None,
-            'sources': ['Emergency guidance - WHO'],
-            'urgency': 'urgent',
-            'confidence': 1.0,
-            'matched_warning_signs': urgent_matches
+            "reply": "This message contains warning signs. Seek immediate medical care or go to the nearest emergency department. If you are in immediate danger call local emergency services.",
+            "kb_id": None,
+            "sources": ["Emergency guidance - WHO"],
+            "urgency": "urgent",
+            "confidence": 1.0,
+            "matched_warning_signs": urgent_matches
         }
 
-    intent = predict_intent(text)
+    # choose retrieval method
+    if FAISS_INDEX is not None:
+        vector_results = _retrieve_with_faiss(text, top_k=TOP_K)
+    else:
+        vector_results = _retrieve_in_memory(text, top_k=TOP_K)
 
-    # retrieval
-    results = find_top_k(text, top_k=TOP_K)
-    if not results:
-        # fallback: TF-IDF or uncertain reply
+    if not vector_results:
         return {
-            'reply': "I'm not sure I understand. Can you rephrase? I can only answer dengue-related questions.",
-            'kb_id': None,
-            'sources': [],
-            'urgency': 'non-urgent',
-            'confidence': 0.0,
-            'matched_warning_signs': []
+            "reply": "Please ask dengue-related questions only. I can help with symptoms, prevention, testing, treatment, and mosquito control.",
+            "kb_id": None,
+            "sources": ["system-rule"],
+            "urgency": "non-urgent",
+            "confidence": 0.0,
+            "matched_warning_signs": []
         }
 
-    best_meta, best_score = results[0]
+    # aggregate vector-level results to kb-level
+    kb_aggs = _aggregate_by_kb(vector_results)
+    # pick top kb
+    best_kb, score_sum, max_score, example = kb_aggs[0]
 
-    # if best score below threshold treat as unknown / ask for rephrase
-    if best_score < SIMILARITY_THRESHOLD:
-        # If the best matched KB is an out_of_scope rejection entry, prefer it
-        # but generally we'll decline
-        # check if any returned candidate was an explicit out_of_scope match
-        for m,s in results:
-            if 'out_of_scope' in m.get('tags',[]):
-                return {
-                    'reply': m.get('canonical_answer'),
-                    'kb_id': m.get('id'),
-                    'sources': m.get('sources', []),
-                    'urgency': m.get('urgency','non-urgent'),
-                    'confidence': float(s),
-                    'matched_warning_signs': []
-                }
-        return {
-            'reply': "I don't have a confident answer for that. Please rephrase, ask a different dengue question, or consult a health professional.",
-            'kb_id': None,
-            'sources': [],
-            'urgency': 'non-urgent',
-            'confidence': float(best_score),
-            'matched_warning_signs': []
-        }
+    # find canonical answer for that kb: example contains canonical_answer
+    canonical = example.get("canonical_answer") or ""
+    sources = example.get("sources", [])
+    urgency = example.get("urgency", "non-urgent")
 
-    # If the returned entry is an out_of_scope entry, return its canonical answer
-    if 'out_of_scope' in best_meta.get('tags', []):
-        return {
-            'reply': best_meta.get('canonical_answer'),
-            'kb_id': best_meta.get('id'),
-            'sources': best_meta.get('sources', []),
-            'urgency': best_meta.get('urgency','non-urgent'),
-            'confidence': float(best_score),
-            'matched_warning_signs': []
-        }
+    # simple confidence mapping
+    confidence = float(score_sum) / (len(vector_results) or 1)
 
-    # otherwise return canonical answer with source and meta
-    reply = best_meta.get('canonical_answer','')
-    sources = best_meta.get('sources', [])
     return {
-        'reply': reply + ("\n\nSource: " + ", ".join(sources) if sources else ""),
-        'kb_id': best_meta.get('id'),
-        'sources': sources,
-        'urgency': best_meta.get('urgency','non-urgent'),
-        'confidence': float(best_score),
-        'matched_warning_signs': []
+        "reply": canonical,
+        "kb_id": best_kb,
+        "sources": sources or [],
+        "urgency": urgency,
+        "confidence": confidence,
+        "matched_warning_signs": []
     }
 
-# Optional: add_kb_item for live updates (in-memory only)
+# --- optional helper to add a KB item at runtime (not covering vector-index bookkeeping) ---
 def add_kb_item(item, embedding_text=None):
-    """
-    Add a KB item (dict) to in-memory META and FAISS index.
-    item must contain keys: id, title, question_variants, canonical_answer, tags, sources, urgency
-    embedding_text: optional string used for embedding; otherwise uses title + variants
-    """
-    global META, EMBEDDINGS, FAISS_INDEX
-    if EMBEDDINGS is None:
-        raise RuntimeError("Index not initialized or embeddings not loaded")
-    if embedding_text is None:
-        variants = item.get("question_variants", []) or []
-        rep = item.get("title","")
-        if variants:
-            rep = rep + " || " + " || ".join(variants[:3])
-    else:
-        rep = embedding_text
-    emb = _embed_text(rep).astype('float32')
-    # append embedding and meta
-    EMBEDDINGS = np.vstack([EMBEDDINGS, emb[None,:]])
-    META.append(item)
-    # add vector to FAISS index (must be same type)
-    FAISS_INDEX.add(emb[None,:])
-    return True
-
-# Optional: persist changes - not implemented here. For production, re-run build_embeddings.py on the updated KB file.
-
-# Quick initialization if file run as script
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--index-dir", default=INDEX_DIR)
-    parser.add_argument("--threshold", type=float, default=SIMILARITY_THRESHOLD)
-    args = parser.parse_args()
-    SIMILARITY_THRESHOLD = args.threshold
-    init_index(args.index_dir)
-    print("Ready. Use get_reply(text) to query.")
+    raise NotImplementedError("add_kb_item not implemented for vector-per-variant index. Re-run build_embeddings_variants.py to update index.")
