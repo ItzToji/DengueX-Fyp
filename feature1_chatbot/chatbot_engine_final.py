@@ -4,6 +4,7 @@ import numpy as np
 
 from sentence_transformers import SentenceTransformer
 
+# Dengue-focused semantic retrieval engine with FAISS/SBERT, urgency detection, and optional typo correction.
 # faiss optional import
 try:
     import faiss
@@ -185,7 +186,7 @@ def get_reply(text, debug=False):
     corrected = _correct_typo(text) if _HAS_TYPOMOD else text
     # build queries; keep uniqueness preserving order
     queries = []
-    for q in [text.strip(), corrected.strip()]:
+    for q in [text.strip(), corrected.strip()] if text else []:
         if q and q not in queries:
             queries.append(q)
 

@@ -1,13 +1,13 @@
 import os, sys, json, argparse, csv, time, math
 from datetime import datetime
 
-# Ensure project root on sys.path
+# Run a full KB regression over chatbot replies with resumable progress and CSV failure logging.
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 try:
-    from feature1_chatbot.chatbot_engine import init_index, get_reply
+    from feature1_chatbot.chatbot_engine_final import init_index, get_reply
 except Exception as e:
     print("Failed to import chatbot_engine. Ensure venv is active and project root is on PYTHONPATH.", e)
     raise
@@ -16,8 +16,9 @@ def load_kb_entries(kb_path):
     entries = []
     with open(kb_path, 'r', encoding='utf-8') as f:
         for line in f:
-            line=line.strip()
-            if not line: continue
+            line = line.strip()
+            if not line:
+                continue
             try:
                 it = json.loads(line)
             except Exception:
@@ -29,7 +30,7 @@ def choose_query_from_entry(entry):
     if entry.get('question_variants'):
         q = entry['question_variants'][0]
     else:
-        q = entry.get('title','')
+        q = entry.get('title', '')
     return (q or "").strip()
 
 def is_correct_reply(expected, reply, prefix_chars=40):
@@ -39,12 +40,11 @@ def is_correct_reply(expected, reply, prefix_chars=40):
     rep = (reply or "").lower()
     if len(exp) >= prefix_chars:
         return exp[:prefix_chars] in rep
-    words = [w for w in exp.split() if len(w)>4]
+    words = [w for w in exp.split() if len(w) > 4]
     return any(w in rep for w in words[:3])
 
 def save_partial_progress(out_jsonl_path, processed_records):
-    # processed_records: list of dicts with index,kb_id,query,expected_prefix,reply,confidence,status
-    # append to JSONL
+    # Append partial evaluation records as JSONL for resume/debugging.
     with open(out_jsonl_path, 'a', encoding='utf-8') as f:
         for rec in processed_records:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
@@ -90,14 +90,12 @@ def main():
 
     print(f"Running from index {start_index} for {total_to_run} items...")
 
-    # prepare failures list and counters
     passed = 0
     failed = 0
     processed = 0
     failures = []
     partial_buffer = []
 
-    # If out_csv exists, back it up (prevent overwrite)
     if os.path.exists(out_csv):
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
         backup = out_csv + f".bak.{timestamp}"
@@ -108,7 +106,7 @@ def main():
     for idx in range(start_index, start_index + total_to_run):
         entry = entries[idx]
         q = choose_query_from_entry(entry)
-        expected = entry.get('canonical_answer','').strip()
+        expected = entry.get('canonical_answer', '').strip()
         kb_id = entry.get('id', f"idx_{idx}")
 
         processed += 1
@@ -119,15 +117,13 @@ def main():
             eta = remaining * per_item
             print(f"[{processed}/{total_to_run}] idx={idx} kb_id={kb_id} elapsed={int(elapsed)}s ETA≈{int(eta)}s")
 
-        # query bot
         try:
             result = get_reply(q)
         except Exception as e:
-            # treat as failure (and log)
             result = {"reply": "", "confidence": 0.0}
             print(f"Error calling get_reply at idx {idx}: {e}")
 
-        reply = result.get('reply','') if isinstance(result, dict) else str(result)
+        reply = result.get('reply', '') if isinstance(result, dict) else str(result)
         confidence = float(result.get('confidence', 0.0)) if isinstance(result, dict) else 0.0
 
         correct = is_correct_reply(expected, reply, prefix_chars=args.prefix_chars)
@@ -145,7 +141,6 @@ def main():
                 'confidence': confidence
             })
 
-        # also accumulate a small buffer to save partials (so we can resume)
         partial_buffer.append({
             'index': idx,
             'kb_id': kb_id,
@@ -156,7 +151,6 @@ def main():
             'status': status
         })
 
-        # periodic flush
         if (processed % save_every) == 0:
             if resume_jsonl:
                 try:
@@ -166,14 +160,12 @@ def main():
                     print("Failed to save partial progress:", e)
             partial_buffer = []
 
-    # final flush for any remaining partials
     if partial_buffer and resume_jsonl:
         save_partial_progress(resume_jsonl, partial_buffer)
         print(f"Saved final partial progress ({len(partial_buffer)}) to {resume_jsonl}")
 
-    # summary
     total_run = processed
-    accuracy = (passed/total_run*100) if total_run>0 else 0.0
+    accuracy = (passed/total_run*100) if total_run > 0 else 0.0
     print("\n=== FULL RUN SUMMARY ===")
     print(f"Total run: {total_run}")
     print(f"Passed: {passed}")
@@ -181,10 +173,9 @@ def main():
     print(f"Accuracy: {accuracy:.2f}%")
     print(f"Time elapsed: {int(time.time() - start_time)}s")
 
-    # write failures CSV
     os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
     with open(out_csv, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['index','kb_id','query','expected_prefix','reply','confidence'])
+        writer = csv.DictWriter(f, fieldnames=['index', 'kb_id', 'query', 'expected_prefix', 'reply', 'confidence'])
         writer.writeheader()
         for r in failures:
             writer.writerow(r)

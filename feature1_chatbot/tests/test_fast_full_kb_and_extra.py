@@ -1,20 +1,12 @@
-# feature1_chatbot/tests/test_fast_full_kb_and_extra.py
-"""
-Optimized FAST full-KB tester (fixed unpack bug).
- - Loads model once
- - Precomputes canonical embeddings once
- - Batches bot reply embeddings
- - Vectorized semantic similarity checks
-"""
-
 import os, sys, json, csv, argparse
 import numpy as np
 
+# Evaluate chatbot replies against KB canonical answers using SBERT similarity and log failures.
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from feature1_chatbot.chatbot_engine import init_index, load_kb, get_reply
+from feature1_chatbot.chatbot_engine_final import init_index, load_kb, get_reply
 from sentence_transformers import SentenceTransformer
 
 SIM_THRESHOLD = 0.70
@@ -88,11 +80,9 @@ def main():
         bot = r.get("reply", "") or ""
         matched_kb = r.get("kb_id")
         conf = r.get("confidence", 0.0)
-        # store a 6-tuple so unpacking later is consistent
         bot_replies.append(bot)
         bot_meta.append((i, kb_id, q, can, matched_kb, conf))
 
-    # If there are zero bot replies, avoid embedding
     if len(bot_replies) == 0:
         print("No queries to evaluate.")
         return
@@ -100,14 +90,9 @@ def main():
     print("Embedding bot replies…")
     bot_embs = embed_texts(model, bot_replies)
 
-    # Compute per-instance similarity between bot reply and corresponding canonical:
-    # both arrays are shape (total, D)
     if canonical_embs.shape[0] != bot_embs.shape[0]:
-        # Fallback: try to broadcast if canonical was empty strings handled differently
-        # We'll compute pairwise dot only for the minimum length
         n = min(canonical_embs.shape[0], bot_embs.shape[0])
         sims = np.sum(bot_embs[:n] * canonical_embs[:n], axis=1)
-        # pad sims with zeros for any remainder
         if n < total:
             sims = np.concatenate([sims, np.zeros(total - n, dtype="float32")])
     else:
@@ -119,20 +104,24 @@ def main():
     fail_csv = os.path.join(os.path.dirname(__file__), "fast_full_failures.csv")
     with open(fail_csv, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["query_idx", "expected_kb", "query", "canonical", "matched_kb",
-                         "confidence", "similarity", "status", "bot_reply"])
+        writer.writerow([
+            "query_idx", "expected_kb", "query", "canonical", "matched_kb",
+            "confidence", "similarity", "status", "bot_reply"
+        ])
 
         print("Evaluating…")
         for idx, sim in enumerate(sims):
             (_, expected_kb, q_text, canonical, matched_kb, conf) = bot_meta[idx]
             bot = bot_replies[idx]
-            # PASS if KB ID match or semantic similarity high
             if (matched_kb is not None and str(matched_kb) == str(expected_kb)) or (sim >= SIM_THRESHOLD):
                 passed += 1
                 continue
 
             failed += 1
-            writer.writerow([idx, expected_kb, q_text, canonical, matched_kb, conf, f"{sim:.3f}", "FAIL", bot[:400]])
+            writer.writerow([
+                idx, expected_kb, q_text, canonical, matched_kb, conf,
+                f"{sim:.3f}", "FAIL", bot[:400]
+            ])
 
     print(f"\n=== SUMMARY ===")
     print(f"Total: {total}")

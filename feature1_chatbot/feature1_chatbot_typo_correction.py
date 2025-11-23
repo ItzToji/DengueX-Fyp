@@ -1,5 +1,4 @@
-# feature1_chatbot/feature1_chatbot_typo_correction.py
-# simple typo correction focused on dengue terms. Exports correct_typo(text) -> corrected_text
+# Simple dengue-domain typo correction helper used to normalize user queries before retrieval.
 
 from difflib import get_close_matches
 
@@ -29,7 +28,7 @@ def correct_typo(text: str) -> str:
     t = text.strip()
     # quick dictionary replacement (word-boundary like)
     lowered = t.lower()
-    for k,v in COMMON_CORRECTIONS.items():
+    for k, v in COMMON_CORRECTIONS.items():
         if k in lowered:
             lowered = lowered.replace(k, v)
     # try to repair isolated token typos: check words against keywords
