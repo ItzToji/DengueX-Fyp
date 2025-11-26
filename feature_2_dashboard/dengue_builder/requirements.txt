@@ -1,0 +1,11 @@
+pandas
+geopandas
+requests
+fiona
+Shapely
+pyproj
+kaggle
+camelot-py[cv]
+tabula-py
+meteoalarm
+meteostat
