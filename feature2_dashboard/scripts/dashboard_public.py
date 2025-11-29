@@ -74,7 +74,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # header: minimal, professional (no "public" label)
-st.markdown('<div class="header-row"><div><div class="brand">Dengue Analytics</div><div class="subtle">Trends — weekly • monthly • yearly • seasonality</div></div><div class="subtle">Data: processed CSV(s)</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="header-row"><div><div class="brand">Pakistan Dengue Dashboard</div>', unsafe_allow_html=True)
 
 # ---------- KPIs ----------
 total = int(df["cases"].sum())
