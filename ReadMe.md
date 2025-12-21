@@ -1,5 +1,6 @@
 🦟 DengueX
 AI-Powered Dengue Surveillance, Analytics & Public Health Awareness System
+
 📌 Overview
 
 DengueX is an AI-assisted digital health platform designed to monitor, analyze, and help prevent dengue outbreaks through real-time data visualization, intelligent health guidance, and citizen participation.
@@ -157,27 +158,6 @@ Admin Command Center
 
 This project is divided into two phases:
 
-📘 FYP Part-1 (Completed)
-
-Problem analysis & system design
-
-Dashboard & reporting system
-
-AI chatbot integration
-
-Admin & citizen workflows
-
-Documentation and evaluation
-
-📕 FYP Part-2 (Planned Enhancements)
-
-Predictive dengue outbreak modeling
-
-Deep learning-based mosquito classification
-
-Mobile application integration
-
-Multi-language support (Urdu / regional languages)
 
 Advanced analytics & alert automation
 
