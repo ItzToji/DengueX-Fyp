@@ -1,6 +1,0 @@
-{
-  "package": "dengue_data_builder_package",
-  "created_by": "ChatGPT (package generator)",
-  "date": "2025-11-26T13:58:36.143540Z",
-  "notes": "This package contains a script to download and assemble Option A real datasets. Internet access required to run the script."
-}
