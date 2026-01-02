@@ -1,36 +1,138 @@
-# Python / env
-venv/
-.env
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Notebook checkpoints
-.ipynb_checkpoints/
-
-# OS
-.DS_Store
-Thumbs.db
+# ==========================
+# 1. NODE.JS / JAVASCRIPT
+# ==========================
+# Dependencies (Sabse Important)
+node_modules/
+jspm_packages/
 
 # Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Builds & Dist (Production ready files)
+dist/
+build/
+out/
+.next/
+.nuxt/
+.vuepress/dist
+.cache/
+coverage/
+
+# Runtime data
+pid
+*.pid
+*.seed
+*.pid.lock
+
+# ==========================
+# 2. PYTHON & VIRTUAL ENV
+# ==========================
+# Byte-compiled / Optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.env/
+.venv/
+venv.bak/
+
+# Distribution / Packaging
+.Python
+develop-eggs/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==========================
+# 3. DATA SCIENCE / ML
+# ==========================
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Heavy Data & Model Files
+*.npy
+*.npz
+*.csv
+*.tsv
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.jsonl
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+models/
+saved_models/
+
+# Vector Stores
+*.faiss
+*.index
+
+# ==========================
+# 4. ENVIRONMENT & SECRETS (Never Commit)
+# ==========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.secret
+*.pem
+*.key
+
+# ==========================
+# 5. IDE & EDITORS
+# ==========================
+.vscode/
+*.code-workspace
+.idea/
+*.iml
+*.iws
+*.sublime-workspace
+*.sublime-project
+
+# ==========================
+# 6. OPERATING SYSTEM
+# ==========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==========================
+# 7. LOGS & DEBUGGING
+# ==========================
 logs/
 *.log
 
-# Data / large model artifacts (do not commit heavy binaries)
-feature1_chatbot/index/
-*.npy
-*.faiss
-*.bin
-
-# Build / dist
-build/
-dist/
-
-# IDE
-.vscode/
-.idea/
-
-# Local data
+# ==========================
+# 8. PROJECT SPECIFIC / EXTRAS
+# ==========================
+# Local data directories
 data/
-models/
+raw_data/
+feature1_chatbot/index/
+
+# Agar aapko kisi specific file ko track karna ho jo is list mein blocked hai, 
+# to aap '!' use kar sakte hain. Example:
+# !important_config.env
