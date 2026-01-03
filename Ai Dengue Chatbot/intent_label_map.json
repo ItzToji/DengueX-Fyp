@@ -1,0 +1,9 @@
+{
+  "dengue_definition": 0,
+  "dengue_emergency": 1,
+  "dengue_prevention": 2,
+  "dengue_symptoms_common": 3,
+  "dengue_testing": 4,
+  "dengue_treatment": 5,
+  "out_of_scope": 6
+}
