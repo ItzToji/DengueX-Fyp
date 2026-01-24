@@ -3,9 +3,13 @@ import os
 import random
 from tqdm import tqdm
 
+# File Paths
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_FILE = os.path.join(BASE_DIR, "dataset", "raw", "dengue_qa_train.jsonl")
 OUTPUT_FILE = os.path.join(BASE_DIR, "dataset", "expanded", "dengue_qa_train_expanded.jsonl")
+
+ # Output Size
 
 TARGET_SIZE = 2000
 
@@ -23,7 +27,8 @@ def normalize(q):
     q = q.replace("question:", "").strip()
     return q.rstrip("?")
 
-# Load seed dataset
+# Load  dataset
+
 records = []
 with open(INPUT_FILE, "r", encoding="utf-8") as f:
     for line in f:

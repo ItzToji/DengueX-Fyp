@@ -1,17 +1,14 @@
 # ==========================
 # 1. NODE.JS / JAVASCRIPT
 # ==========================
-# Dependencies (Sabse Important)
 node_modules/
 jspm_packages/
 
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Builds & Dist (Production ready files)
 dist/
 build/
 out/
@@ -21,7 +18,6 @@ out/
 .cache/
 coverage/
 
-# Runtime data
 pid
 *.pid
 *.seed
@@ -30,68 +26,46 @@ pid
 # ==========================
 # 2. PYTHON & VIRTUAL ENV
 # ==========================
-# Byte-compiled / Optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual Environments
 venv/
 env/
-.env/
 .venv/
-venv.bak/
+.env/
 
-# Distribution / Packaging
 .Python
-develop-eggs/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
 *.egg
-MANIFEST
 
 # ==========================
 # 3. DATA SCIENCE / ML
 # ==========================
-# Jupyter Notebooks
 .ipynb_checkpoints/
 */.ipynb_checkpoints/
 
-# Heavy Data & Model Files
+# Heavy model & binary artifacts (DO NOT COMMIT)
 *.npy
 *.npz
-*.csv
-*.tsv
 *.pkl
 *.pickle
 *.h5
 *.hdf5
-*.jsonl
 *.pt
 *.pth
 *.bin
 *.onnx
 *.safetensors
-models/
-saved_models/
-
-# Vector Stores
 *.faiss
 *.index
 
+# 🔴 Trained model weights
+chatbot_ml/models/
+
 # ==========================
-# 4. ENVIRONMENT & SECRETS (Never Commit)
+# 4. ENVIRONMENT & SECRETS
 # ==========================
-.env
 .env.local
 .env.development.local
 .env.test.local
@@ -104,35 +78,24 @@ saved_models/
 # 5. IDE & EDITORS
 # ==========================
 .vscode/
-*.code-workspace
 .idea/
 *.iml
-*.iws
-*.sublime-workspace
-*.sublime-project
 
 # ==========================
-# 6. OPERATING SYSTEM
+# 6. OS
 # ==========================
 .DS_Store
 Thumbs.db
-ehthumbs.db
-Desktop.ini
 
 # ==========================
-# 7. LOGS & DEBUGGING
+# 7. LOGS
 # ==========================
-logs/
 *.log
 
 # ==========================
-# 8. PROJECT SPECIFIC / EXTRAS
+# 8. PROJECT-SPECIFIC
 # ==========================
-# Local data directories
 data/
 raw_data/
 feature1_chatbot/index/
-
-# Agar aapko kisi specific file ko track karna ho jo is list mein blocked hai, 
-# to aap '!' use kar sakte hain. Example:
-# !important_config.env
+    
