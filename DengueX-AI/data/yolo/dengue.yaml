@@ -1,0 +1,9 @@
+path: data/yolo
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: dengue_mosquito
+  1: non_dengue_mosquito
+  2: non_mosquito
